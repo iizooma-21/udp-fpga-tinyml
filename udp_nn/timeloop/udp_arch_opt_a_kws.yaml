@@ -1,0 +1,142 @@
+# =============================================================================
+# udp_arch_opt_a_kws.yaml — Opt-A (96 PEs) with relaxed spatial constraints
+#                           for KWS (DS-CNN) layers.
+#
+# KWS layers have C=1 (depthwise) and K=64. The standard opt_a spatial
+# constraints pin P,Q,R,S to 1 in the X direction and only allow S spatially,
+# which leaves K unable to fill the 8 columns. This variant frees K to be
+# distributed across columns (K=64 → 8 cols × 8 filters each).
+# =============================================================================
+
+mapper:
+  algorithm: linear-pruned
+  optimization-metrics:
+  - delay
+  - energy
+  victory-condition: 100
+  timeout: 2000
+  num-threads: 4
+
+arch:
+  arithmetic:
+    name: MACs
+    instances: 96
+    meshX: 8
+    word-bits: 4
+
+  storage:
+  - name: PsumRegFile
+    instances: 96
+    meshX: 8
+    entries: 16
+    word-bits: 12
+    read_bandwidth: 2
+    write_bandwidth: 2
+
+  - name: WeightRegFile
+    instances: 96
+    meshX: 8
+    entries: 192
+    word-bits: 4
+    read_bandwidth: 2
+    write_bandwidth: 2
+
+  - name: InputRegFile
+    instances: 96
+    meshX: 8
+    entries: 8
+    word-bits: 4
+    read_bandwidth: 2
+    write_bandwidth: 2
+
+  - name: DummyBuffer
+    instances: 8
+    meshX: 8
+    entries: 0
+    word-bits: 4
+
+  - name: GlobalBuffer
+    instances: 1
+    meshX: 1
+    sizeKB: 256
+    word-bits: 4
+    block-size: 4
+    read_bandwidth: 16
+    write_bandwidth: 16
+
+  - name: DRAM
+    technology: DRAM
+    instances: 1
+    word-bits: 4
+
+mapspace:
+  constraints:
+  # ── Weight-stationary datatype bypass (unchanged) ─────────────────────────
+  - target: PsumRegFile
+    type: datatype
+    keep: [Outputs]
+    bypass: [Weights, Inputs]
+
+  - target: WeightRegFile
+    type: datatype
+    keep: [Weights]
+    bypass: [Inputs, Outputs]
+
+  - target: InputRegFile
+    type: datatype
+    keep: [Inputs]
+    bypass: [Weights, Outputs]
+
+  - target: DummyBuffer
+    type: datatype
+    bypass: [Inputs, Outputs, Weights]
+
+  - target: GlobalBuffer
+    type: datatype
+    keep: [Inputs, Outputs]
+    bypass: [Weights]
+
+  # ── Spatial mapping: K fills the 8 columns (relaxed for KWS) ─────────────
+  # split: 1 → first loop (K) maps to X-axis (meshX=8); rest map to Y (meshY=1)
+  - target: DummyBuffer
+    type: spatial
+    split: 1
+    factors: N1 P1 Q1 R1 S1 C1
+    permutation: K NCSPQR
+
+  - target: GlobalBuffer
+    type: spatial
+    split: 1
+    factors: N1 C1 P1 R1 S1
+    permutation: K NCPRS Q
+
+  # ── Temporal loop ordering ────────────────────────────────────────────────
+  - target: PsumRegFile
+    type: temporal
+    factors: N1 C1 P1 Q1 R1
+    permutation: NCPQR SK
+
+  - target: WeightRegFile
+    type: temporal
+    factors: N1 K1 P1 Q1 R0
+    permutation: NKPQ SCR
+
+  - target: InputRegFile
+    type: temporal
+    factors: N1 K1 C1 P1 Q1 R1
+    permutation: NKCPQR S
+
+  - target: DummyBuffer
+    type: temporal
+    factors: N1 K1 C1 P1 Q1 R1
+    permutation: NKCPQR S
+
+  - target: GlobalBuffer
+    type: temporal
+    factors: Q1 R1 C1 P0
+    permutation: QRC PSNK
+
+  - target: DRAM
+    type: temporal
+    factors: R1 P1
+    permutation: RP SCKNQ

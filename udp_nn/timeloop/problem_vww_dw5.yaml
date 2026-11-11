@@ -1,0 +1,30 @@
+# =============================================================================
+# problem_vww_dw5.yaml — MLPerf Tiny VWW, MobileNetV1 depthwise conv (mid)
+# =============================================================================
+#
+# Representative mid-network depthwise block (stride=2, 128 channels):
+#   DWConv(128, kernel=3×3, stride=2, padding=1)  [α=0.25: 32 channels]
+#   Input : (1, 32, 24, 24)
+#   Output: (1, 32, 12, 12)
+#
+# im2col equivalent (per group / channel):
+#   M = 12 × 12 = 144  (output spatial positions)
+#   N = 1 output channel per group
+#   K = 3 × 3 = 9 (kernel area)
+#   Total MACs = 32 × 144 × 9 = 41,472
+#
+# Timeloop: model as C=1, K=32 (one independent 3×3 conv per channel)
+# =============================================================================
+
+problem:
+  R: 3
+  S: 3
+  P: 12
+  Q: 12
+  C: 1
+  K: 32
+  N: 1
+  Wstride: 2
+  Hstride: 2
+  Wdilation: 1
+  Hdilation: 1

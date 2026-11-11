@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.env
+.venv
+env/
+venv/
+*.pyc
+
+# PyTorch checkpoints (large binary files)
+udp_nn/checkpoints/*.pth
+
+# Dataset caches (large, re-downloadable)
+udp_nn/data/
+
+# Timeloop output artifacts
+udp_nn/latency/outputs/
+udp_nn/timeloop/outputs/
+udp_nn/timeloop/timeloop-mapper.*
+udp_nn/latency/timeloop-mapper.*
+
+# Vivado project files (auto-generated, large)
+*.xpr
+*.cache/
+*.hw/
+*.ip_user_files/
+*.sim/
+*.runs/
+*.srcs/
+*.gen/
+*.str
+vivado*.jou
+vivado*.log
+
+# PDF papers (copyrighted)
+*.pdf
+
+# OS & editor artifacts
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# LaTeX thesis template (excluded per user request)
+CES-thesis-template/
+
+# Zip archives
+*.zip

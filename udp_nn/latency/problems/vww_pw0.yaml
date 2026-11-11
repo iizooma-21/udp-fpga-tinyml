@@ -1,0 +1,14 @@
+# Auto-generated problem YAML for vww_pw0
+# C=8 K=16 R=1 S=1 P=48 Q=48 stride=1  MACs=294,912
+problem:
+  R: 1
+  S: 1
+  P: 48
+  Q: 48
+  C: 8
+  K: 16
+  N: 1
+  Wstride: 1
+  Hstride: 1
+  Wdilation: 1
+  Hdilation: 1

@@ -1,0 +1,14 @@
+# Auto-generated problem YAML for vww_dw5b
+# C=1 K=64 R=3 S=3 P=6 Q=6 stride=2  MACs=20,736
+problem:
+  R: 3
+  S: 3
+  P: 6
+  Q: 6
+  C: 1
+  K: 64
+  N: 1
+  Wstride: 2
+  Hstride: 2
+  Wdilation: 1
+  Hdilation: 1

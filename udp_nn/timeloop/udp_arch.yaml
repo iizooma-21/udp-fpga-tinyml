@@ -1,0 +1,193 @@
+# =============================================================================
+# udp_arch.yaml — Timeloop architecture for the UDP weight-stationary SA
+# =============================================================================
+#
+# Hardware reference : udp_systolic/rtl/systolic_array.v
+#                      udp_systolic/rtl/udp_pe.v
+#
+# Template lineage   : NVlabs Timeloop Eyeriss-style weight-stationary array
+#                      (eyeriss-256.yaml), scaled 16-wide -> 12-wide:
+#                        256 PEs / meshX 16  ->  144 PEs / meshX 12
+#                        DummyBuffer 16      ->  12
+#
+# UDP-specific notes
+# ------------------
+#   • 12 x 12 = 144 PEs, each with 1 DSP48E2 (udp_mac_top)
+#   • P_w=3, P_a=2  =>  6 int4 MACs per PE per cycle
+#   • Timeloop models 144 scalar MAC units at 4-bit width.
+#     Effective throughput = reported_compute * 6  (UDP packing factor)
+#   • Dataflow: WEIGHT-STATIONARY (weights in WeightRegFile, activations stream)
+#   • Native output tile per SA invocation: 24 x 36  (12*P_a  x  12*P_w)
+#   • Accumulator width in RTL: ACC_WIDTH = 12  (K_MAX = 31 inner dim chunks)
+#
+# Memory hierarchy (Timeloop level -> RTL concept)
+# -------------------------------------------------
+#   DRAM          : off-chip weights + activations + outputs
+#   GlobalBuffer  : shared on-chip SRAM (256 KB) for activations / partial outputs
+#   DummyBuffer   : Eyeriss mapping shim (12-wide spatial fanout control)
+#   InputRegFile  : per-PE activation register (systolic pipeline input)
+#   WeightRegFile : per-PE weight register (stationary during K reduction)
+#   PsumRegFile   : per-PE partial-sum register (12-bit, matches ACC_WIDTH)
+#   MACs          : compute — 144 int4 MAC units (UDP PE array)
+#
+# Usage (with a separate problem_*.yaml per layer):
+#   timeloop-mapper udp_arch.yaml problem_stem_conv.yaml
+#
+# This file is reused for ALL ResNet-8 layers; only the problem YAML changes.
+# =============================================================================
+
+mapper:
+  algorithm: linear-pruned
+  optimization-metrics:
+  - delay
+  - energy
+  victory-condition: 100
+  timeout: 2000
+  num-threads: 4
+
+arch:
+  # ── Compute: 144 PEs on a 12-wide spatial mesh ───────────────────────────
+  arithmetic:
+    name: MACs
+    instances: 144
+    meshX: 12
+    word-bits: 4
+
+  storage:
+  # ── L0 partial sums (per PE, 12-bit accumulators) ────────────────────────
+  - name: PsumRegFile
+    instances: 144
+    meshX: 12
+    entries: 16
+    word-bits: 12
+    read_bandwidth: 2
+    write_bandwidth: 2
+
+  # ── L1 weights (stationary in WS dataflow) ───────────────────────────────
+  # entries=192: holds packed int4 weight column per PE (3 weights x K-tile)
+  - name: WeightRegFile
+    instances: 144
+    meshX: 12
+    entries: 192
+    word-bits: 4
+    read_bandwidth: 2
+    write_bandwidth: 2
+
+  # ── L1 activations (stream through systolic rows) ───────────────────────
+  # entries=12: matches PE_COLS-1 skew depth + 1 in RTL timing protocol
+  - name: InputRegFile
+    instances: 144
+    meshX: 12
+    entries: 12
+    word-bits: 4
+    read_bandwidth: 2
+    write_bandwidth: 2
+
+  # ── Mapping shim (from Eyeriss template, width scaled 16 -> 12) ──────────
+  - name: DummyBuffer
+    instances: 12
+    meshX: 12
+    entries: 0
+    word-bits: 4
+
+  # ── Shared on-chip buffer ───────────────────────────────────────────────
+  - name: GlobalBuffer
+    instances: 1
+    meshX: 1
+    sizeKB: 256
+    word-bits: 4
+    block-size: 4
+    read_bandwidth: 16
+    write_bandwidth: 16
+
+  # ── Off-chip memory ─────────────────────────────────────────────────────
+  - name: DRAM
+    technology: DRAM
+    instances: 1
+    word-bits: 4
+
+mapspace:
+  constraints:
+  # ── Weight-stationary datatype bypass (which tensor lives at each level) ─
+  - target: PsumRegFile
+    type: datatype
+    keep:
+    - Outputs
+    bypass:
+    - Weights
+    - Inputs
+
+  - target: WeightRegFile
+    type: datatype
+    keep:
+    - Weights
+    bypass:
+    - Inputs
+    - Outputs
+
+  - target: InputRegFile
+    type: datatype
+    keep:
+    - Inputs
+    bypass:
+    - Weights
+    - Outputs
+
+  - target: DummyBuffer
+    type: datatype
+    bypass:
+    - Inputs
+    - Outputs
+    - Weights
+
+  - target: GlobalBuffer
+    type: datatype
+    keep:
+    - Inputs
+    - Outputs
+    bypass:
+    - Weights
+
+  # ── Spatial mapping (scaled from Eyeriss 16-wide -> 12-wide) ─────────────
+  - target: DummyBuffer
+    type: spatial
+    split: 4
+    factors: N1 P1 Q1 R1 S0
+    permutation: NPQR SCK
+
+  - target: GlobalBuffer
+    type: spatial
+    split: 7
+    factors: N1 C1 P1 R1 S1
+    permutation: NCPRS QK
+
+  # ── Temporal loop ordering (defines WS schedule) ────────────────────────
+  - target: PsumRegFile
+    type: temporal
+    factors: N1 C1 P1 Q1 R1 S1
+    permutation: NCPQRS K
+
+  - target: WeightRegFile
+    type: temporal
+    factors: N1 K1 P1 Q1 S1 R0
+    permutation: NKPQS CR
+
+  - target: InputRegFile
+    type: temporal
+    factors: N1 K1 C1 P1 Q1 R1 S1
+    permutation: NKCPQRS
+
+  - target: DummyBuffer
+    type: temporal
+    factors: N1 K1 C1 P1 Q1 R1 S1
+    permutation: NKCPQRS
+
+  - target: GlobalBuffer
+    type: temporal
+    factors: Q1 R1 S1 C1 P0
+    permutation: QRSC PNK
+
+  - target: DRAM
+    type: temporal
+    factors: R1 S1 P1
+    permutation: RSP CKNQ

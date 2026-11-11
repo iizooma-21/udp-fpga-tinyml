@@ -1,0 +1,31 @@
+# =============================================================================
+# problem_vww_conv1.yaml — MLPerf Tiny VWW, MobileNetV1 stem conv
+# =============================================================================
+#
+# PyTorch layer:
+#   Conv2d(3, 8, kernel=3×3, stride=2, padding=1)
+#   Input : (1, 3, 96, 96)
+#   Output: (1, 8, 48, 48)
+#
+# im2col GEMM equivalent:
+#   M = 48 × 48 = 2304  (output spatial positions)
+#   N = 8               (output channels, alpha=0.25: 32×0.25=8)
+#   K = 3 × 3 × 3 = 27  (kernel area × input channels)
+#   MACs = 2304 × 8 × 27 = 497,664
+#
+# Timeloop CNN notation:
+#   P=Q=48, C=3, K=8, R=S=3, stride=2
+# =============================================================================
+
+problem:
+  R: 3
+  S: 3
+  P: 48
+  Q: 48
+  C: 3
+  K: 8
+  N: 1
+  Wstride: 2
+  Hstride: 2
+  Wdilation: 1
+  Hdilation: 1

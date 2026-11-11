@@ -1,0 +1,4 @@
+{
+  "FP32 AUC": 1.0,
+  "INT4 weight-only AUC": 1.0
+}

@@ -1,0 +1,21 @@
+# kws_spatial.yaml — Relaxed spatial constraints for KWS (DS-CNN) layers
+#
+# Problem: The default opt_a/opt_b spatial constraints pin P,Q,R,S to 1
+# and only allow S in the X direction. KWS layers have C=1 (depthwise) and
+# K=64, so K must be free to map to the 8-column X dimension.
+#
+# This override replaces DummyBuffer and GlobalBuffer spatial constraints
+# to allow K to be spatially distributed across columns.
+
+mapspace:
+  constraints:
+  # Allow K to fill the 8 spatial columns (K=64 → 8 cols of 8 filters each)
+  - target: DummyBuffer
+    type: spatial
+    factors: N1 C1 P1 Q1 R1 S1
+    permutation: K NCPQRS
+
+  - target: GlobalBuffer
+    type: spatial
+    factors: N1
+    permutation: K CPQRSN

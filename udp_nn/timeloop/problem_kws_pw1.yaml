@@ -1,0 +1,31 @@
+# =============================================================================
+# problem_kws_pw1.yaml — MLPerf Tiny KWS, DS-CNN pointwise conv layer
+# =============================================================================
+#
+# PyTorch layer (×4 in DS-CNN):
+#   Conv2d(64, 64, kernel=1×1, stride=1)  [pointwise = matrix multiply]
+#   Input : (1, 64, 25, 5)
+#   Output: (1, 64, 25, 5)
+#
+# im2col GEMM equivalent:
+#   M = 25 × 5 = 125   (spatial positions)
+#   N = 64             (output channels)
+#   K = 64             (input channels; R=S=1 so no spatial kernel)
+#   MACs = 125 × 64 × 64 = 512,000
+#
+# Timeloop CNN notation:
+#   R=S=1 → pure channel-mix (no spatial reduction)
+# =============================================================================
+
+problem:
+  R: 1
+  S: 1
+  P: 25
+  Q: 5
+  C: 64
+  K: 64
+  N: 1
+  Wstride: 1
+  Hstride: 1
+  Wdilation: 1
+  Hdilation: 1

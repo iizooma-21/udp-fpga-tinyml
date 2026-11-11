@@ -1,0 +1,35 @@
+# =============================================================================
+# problem_kws_conv1.yaml — MLPerf Tiny KWS, DS-CNN initial conv layer
+# =============================================================================
+#
+# Keras / PyTorch layer:
+#   Conv2d(1→64, kernel=10×4, stride=2×2, padding=5×1)
+#   Input : (1, 1, 49, 10)
+#   Output: (1, 64, 25, 5)
+#
+# im2col GEMM equivalent:
+#   M = 25 × 5 = 125   (output spatial positions)
+#   N = 64             (output channels)
+#   K = 1 × 10 × 4 = 40  (input ch × kernel area)
+#   MACs = 125 × 64 × 40 = 320,000
+#
+# Timeloop CNN notation:
+#   P, Q = output height, width  (25, 5)
+#   C    = input channels  (1)
+#   K    = output channels (64)
+#   R, S = kernel height, width  (10, 4)
+#   N    = batch size  (1)
+# =============================================================================
+
+problem:
+  R: 10
+  S: 4
+  P: 25
+  Q: 5
+  C: 1
+  K: 64
+  N: 1
+  Wstride: 2
+  Hstride: 2
+  Wdilation: 1
+  Hdilation: 1

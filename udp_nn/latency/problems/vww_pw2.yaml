@@ -1,0 +1,14 @@
+# Auto-generated problem YAML for vww_pw2
+# C=32 K=32 R=1 S=1 P=24 Q=24 stride=1  MACs=589,824
+problem:
+  R: 1
+  S: 1
+  P: 24
+  Q: 24
+  C: 32
+  K: 32
+  N: 1
+  Wstride: 1
+  Hstride: 1
+  Wdilation: 1
+  Hdilation: 1

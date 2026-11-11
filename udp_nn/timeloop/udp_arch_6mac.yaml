@@ -1,0 +1,251 @@
+# =============================================================================
+# udp_arch_6mac.yaml -- UDP systolic array: 6 MACs per PE explicitly modeled
+# =============================================================================
+#
+# Extends udp_arch.yaml by modelling the UDP cross-product packing inside
+# each physical PE as 6 independent int4 MAC units arranged in a 2-level
+# spatial hierarchy:
+#
+#   Outer (unchanged)  : 12 x 12 PE mesh  --> DummyBuffer (12 instances)
+#   Inner (new)        : K x 3, C x 2     --> UDPShim    (144 instances)
+#   Inner MACs (new)   : 864 = 144 * 6    --> MACs       (864 instances)
+#
+# UDP cross-product per PE per cycle
+# -----------------------------------
+#   P_w = 3  (weight lanes, maps to K dimension)
+#   P_a = 2  (activation lanes, maps to C dimension)
+#   Products = P_w * P_a = 6
+#
+#   Weight inputs  : P_w * 4 bits = 12 bits  (NOT 24: each of the 3 weights
+#                                              is shared by 2 inner MACs)
+#   Activ. inputs  : P_a * 4 bits =  8 bits  (NOT 24: each of the 2 acts
+#                                              is shared by 3 inner MACs)
+#   Accumulator out: 6 * 12 bits  = 72 bits  (6 x ACC_WIDTH=12 accumulators)
+#
+#   Data reuse within one PE cycle: each weight used P_a=2 times,
+#   each activation used P_w=3 times.  Total unique inputs = 3+2 = 5.
+#
+# What changes vs udp_arch.yaml
+# ------------------------------
+#   - arithmetic : instances 144 -> 864, meshX 12 -> 6
+#   - PsumRegFile: instances 144 -> 864, meshX 12 -> 6
+#   - WeightRegFile: same scaling
+#   - InputRegFile : same scaling
+#   - NEW UDPShim  : 144 instances, meshX 12 (pure spatial shim, entries=0)
+#   - NEW mapspace : UDPShim spatial C2*K3, UDPShim temporal all-1
+#
+# Timeloop now reports cycles directly without the /6 post-correction.
+#
+# Usage (same problem files as udp_arch.yaml):
+#   timeloop-mapper udp_arch_6mac.yaml problem_stem_conv.yaml
+#   ./run_mapper.sh all_6mac
+# =============================================================================
+
+mapper:
+  algorithm: linear-pruned
+  optimization-metrics:
+  - delay
+  - energy
+  victory-condition: 100
+  timeout: 2000
+  num-threads: 4
+
+arch:
+  # ---- Compute: 864 MACs (144 PEs x 6 inner UDP MACs) ---------------------
+  arithmetic:
+    name: MACs
+    instances: 864       # 144 PEs * 6  (P_w=3 * P_a=2)
+    meshX: 72            # 12 outer PEs * 6 inner MACs (must be multiple of UDPShim meshX=12)
+    word-bits: 4         # int4 per MAC unit
+
+  storage:
+  # ---- L0: partial-sum register (per inner MAC, 12-bit accumulator) -------
+  - name: PsumRegFile
+    instances: 864
+    meshX: 72            # same rule: multiple of UDPShim meshX=12
+    entries: 16
+    word-bits: 12        # 12-bit accumulator (matches RTL ACC_WIDTH)
+    read_bandwidth: 2
+    write_bandwidth: 2
+
+  # ---- L1: weight register (per inner MAC, int4, weight-stationary) -------
+  - name: WeightRegFile
+    instances: 864
+    meshX: 72
+    entries: 192
+    word-bits: 4         # int4 weight per MAC unit
+    read_bandwidth: 2
+    write_bandwidth: 2
+
+  # ---- L1: activation register (per inner MAC, int4, streams through) -----
+  - name: InputRegFile
+    instances: 864
+    meshX: 72
+    entries: 12
+    word-bits: 4         # int4 activation per MAC unit
+    read_bandwidth: 2
+    write_bandwidth: 2
+
+  # ---- L2: UDP inner-PE shim (NEW) ----------------------------------------
+  # Groups P_w*P_a = 6 inner MACs per physical PE.
+  # Pure spatial pass-through (entries=0, no data stored here).
+  # The spatial constraint at this level implements the cross-product:
+  #   K x 3  (P_w=3 weight lanes -> 3 distinct output channels per PE)
+  #   C x 2  (P_a=2 activ. lanes -> 2 distinct input  channels per PE)
+  - name: UDPShim
+    instances: 144       # one per PE (12x12 physical array)
+    meshX: 12
+    entries: 0
+    word-bits: 4
+
+  # ---- L3: outer spatial shim (unchanged from udp_arch.yaml) ---------------
+  - name: DummyBuffer
+    instances: 12
+    meshX: 12
+    entries: 0
+    word-bits: 4
+
+  # ---- L4: shared on-chip SRAM (256 KB) ------------------------------------
+  - name: GlobalBuffer
+    instances: 1
+    meshX: 1
+    sizeKB: 256
+    word-bits: 4
+    block-size: 4
+    read_bandwidth: 16
+    write_bandwidth: 16
+
+  # ---- L5: off-chip DRAM ---------------------------------------------------
+  - name: DRAM
+    technology: DRAM
+    instances: 1
+    word-bits: 4
+
+mapspace:
+  constraints:
+
+  # ==========================================================================
+  # Datatype bypass (weight-stationary): same as udp_arch.yaml
+  # ==========================================================================
+  - target: PsumRegFile
+    type: datatype
+    keep:
+    - Outputs
+    bypass:
+    - Weights
+    - Inputs
+
+  - target: WeightRegFile
+    type: datatype
+    keep:
+    - Weights
+    bypass:
+    - Inputs
+    - Outputs
+
+  - target: InputRegFile
+    type: datatype
+    keep:
+    - Inputs
+    bypass:
+    - Weights
+    - Outputs
+
+  - target: UDPShim
+    type: datatype
+    bypass:
+    - Inputs
+    - Outputs
+    - Weights
+
+  - target: DummyBuffer
+    type: datatype
+    bypass:
+    - Inputs
+    - Outputs
+    - Weights
+
+  - target: GlobalBuffer
+    type: datatype
+    keep:
+    - Inputs
+    - Outputs
+    bypass:
+    - Weights
+
+  # ==========================================================================
+  # Spatial mapping
+  # ==========================================================================
+
+  # -- Inner: 6-wide UDP inner-MAC spatial  (P_a * P_w = 2 * 3 = 6)
+  # Fan-out: UDPShim (144, meshX=12) -> inner regs (864, meshX=72)
+  #   X expansion = 72/12 = 6  <- all 6 inner MACs go in the X direction
+  #   split=7 puts all dims in X so X factor must equal 6.
+  #   C and K are NOT pinned (left free) so the mapper picks valid
+  #   divisible factors for each layer (e.g. C3*K2 for stem, C2*K3 for s1).
+  - target: UDPShim
+    type: spatial
+    split: 7
+    factors: N1 P1 Q1 R1 S1
+    permutation: NPQRS CK
+
+  # -- Outer: 12-wide PE mesh (unchanged from udp_arch.yaml)
+  # Fan-out: DummyBuffer (12) -> UDPShim (144);  144/12 = 12
+  - target: DummyBuffer
+    type: spatial
+    split: 4
+    factors: N1 P1 Q1 R1 S0
+    permutation: NPQR SCK
+
+  # Fan-out: GlobalBuffer (1) -> DummyBuffer (12);  12/1 = 12
+  - target: GlobalBuffer
+    type: spatial
+    split: 7
+    factors: N1 C1 P1 R1 S1
+    permutation: NCPRS QK
+
+  # ==========================================================================
+  # Temporal loop ordering
+  # ==========================================================================
+
+  # UDPShim is a pure spatial shim; no temporal loops live here
+  - target: UDPShim
+    type: temporal
+    factors: N1 K1 C1 P1 Q1 R1 S1
+    permutation: NKCPQRS
+
+  # PsumRegFile: accumulate K temporally within each inner MAC
+  - target: PsumRegFile
+    type: temporal
+    factors: N1 C1 P1 Q1 R1 S1
+    permutation: NCPQRS K
+
+  # WeightRegFile: hold weights across R (kernel rows) -- weight-stationary
+  - target: WeightRegFile
+    type: temporal
+    factors: N1 K1 P1 Q1 S1 R0
+    permutation: NKPQS CR
+
+  # InputRegFile: one activation element per MAC per cycle
+  - target: InputRegFile
+    type: temporal
+    factors: N1 K1 C1 P1 Q1 R1 S1
+    permutation: NKCPQRS
+
+  # DummyBuffer: no temporal storage (pass-through)
+  - target: DummyBuffer
+    type: temporal
+    factors: N1 K1 C1 P1 Q1 R1 S1
+    permutation: NKCPQRS
+
+  # GlobalBuffer: tile P temporally; Q/R/S/C stay small per tile
+  - target: GlobalBuffer
+    type: temporal
+    factors: Q1 R1 S1 C1 P0
+    permutation: QRSC PNK
+
+  # DRAM: outer loop over all remaining dimensions
+  - target: DRAM
+    type: temporal
+    factors: R1 S1 P1
+    permutation: RSP CKNQ

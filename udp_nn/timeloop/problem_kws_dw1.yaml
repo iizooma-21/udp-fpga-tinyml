@@ -1,0 +1,37 @@
+# =============================================================================
+# problem_kws_dw1.yaml — MLPerf Tiny KWS, DS-CNN depthwise conv layer
+# =============================================================================
+#
+# PyTorch layer (×4 in DS-CNN):
+#   Conv2d(64, 64, kernel=3×3, stride=1, padding=1, groups=64)  [depthwise]
+#   Input : (1, 64, 25, 5)
+#   Output: (1, 64, 25, 5)
+#
+# Depthwise conv in Timeloop:
+#   Each output channel has exactly 1 input channel (groups=64).
+#   We model this as C=1, K=64 — one "independent convolution" per channel.
+#   (Timeloop treats each group independently; utilisation will be very low
+#    on a standard systolic array → this is the expected result for DW conv.)
+#
+# im2col GEMM equivalent (per group):
+#   M = 25 × 5 = 125   (spatial positions)
+#   N = 1              (1 output channel per group)
+#   K = 1 × 3 × 3 = 9 (kernel area, 1 input channel)
+#   Total MACs = 64 groups × 125 × 9 = 72,000
+#
+# Timeloop models the full 64-channel depthwise as:
+#   K=64, C=1, R=3, S=3, P=25, Q=5
+# =============================================================================
+
+problem:
+  R: 3
+  S: 3
+  P: 25
+  Q: 5
+  C: 1
+  K: 64
+  N: 1
+  Wstride: 1
+  Hstride: 1
+  Wdilation: 1
+  Hdilation: 1

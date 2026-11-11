@@ -1,0 +1,37 @@
+# =============================================================================
+# problem_stem_conv.yaml — MLPerf Tiny ResNet-8, stem convolution
+# =============================================================================
+#
+# Keras layer (resnet_v1_eembc, conv_filters=26):
+#   Conv2D(26, kernel=3x3, stride=1, padding=same) on 32x32x3 input
+#
+# im2col GEMM equivalent (see analyze_resnet8.py / LAYER_TABLE.md):
+#   C[M x N] = A[M x K] @ B[K x N]
+#   M = 1024  (32 x 32 output spatial positions)
+#   N = 26    (output channels / filters)
+#   K = 27    (3 x 3 x 3 kernel volume)
+#   MACs = 718,848
+#
+# Timeloop CNN notation (used with udp_arch.yaml Eyeriss-style constraints):
+#   P, Q = output height, width
+#   C    = input channels
+#   K    = output channels (filters)
+#   R, S = kernel height, width
+#   N    = batch size
+#
+# Run:
+#   timeloop-mapper udp_arch.yaml problem_stem_conv.yaml
+# =============================================================================
+
+problem:
+  R: 3
+  S: 3
+  P: 32
+  Q: 32
+  C: 3
+  K: 26
+  N: 1
+  Wstride: 1
+  Hstride: 1
+  Wdilation: 1
+  Hdilation: 1

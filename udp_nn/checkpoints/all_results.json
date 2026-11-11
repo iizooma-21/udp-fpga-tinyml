@@ -1,0 +1,30 @@
+{
+  "IC": {
+    "FP32": 90.49,
+    "Naive INT4 PTQ": 45.41,
+    "UDP Mode 4 (w-only)": 78.59,
+    "UDP Mode 5 (full INT4)": 74.06,
+    "QAT-w4 direct": 89.88,
+    "UDP Mode 4 (QAT weights)": 89.88,
+    "UDP Mode 5 (QAT weights)": 86.34,
+    "QAT-full direct": 88.5
+  },
+  "IC_QAT": {},
+  "KWS": {},
+  "KWS_QAT": {},
+  "VWW": {
+    "FP32": 44.193166107051155,
+    "Naive INT4 PTQ": 44.193166107051155,
+    "UDP Mode 4 (w-only)": 44.193166107051155,
+    "UDP Mode 5 (full INT4)": 44.193166107051155
+  },
+  "VWW_QAT": {
+    "QAT-w4 direct": 44.193166107051155,
+    "UDP Mode 4 (QAT weights)": 44.193166107051155,
+    "UDP Mode 5 (QAT weights)": 44.193166107051155
+  },
+  "AD": {
+    "FP32 AUC": 1.0,
+    "INT4 weight-only AUC": 1.0
+  }
+}

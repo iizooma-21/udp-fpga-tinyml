@@ -1,0 +1,3 @@
+[submodule "mlperf_tiny"]
+	path = mlperf_tiny
+	url = https://github.com/mlcommons/tiny.git

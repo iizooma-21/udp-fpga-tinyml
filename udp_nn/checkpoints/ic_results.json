@@ -1,0 +1,10 @@
+{
+  "FP32": 90.49,
+  "Naive INT4 PTQ": 45.41,
+  "UDP Mode 4 (w-only)": 78.59,
+  "UDP Mode 5 (full INT4)": 74.06,
+  "QAT-w4 direct": 89.88,
+  "UDP Mode 4 (QAT weights)": 89.88,
+  "UDP Mode 5 (QAT weights)": 86.34,
+  "QAT-full direct": 88.5
+}

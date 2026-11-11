@@ -1,0 +1,14 @@
+# Auto-generated problem YAML for ic_s3c1
+# C=52 K=104 R=3 S=3 P=8 Q=8 stride=2  MACs=3,115,008
+problem:
+  R: 3
+  S: 3
+  P: 8
+  Q: 8
+  C: 52
+  K: 104
+  N: 1
+  Wstride: 2
+  Hstride: 2
+  Wdilation: 1
+  Hdilation: 1

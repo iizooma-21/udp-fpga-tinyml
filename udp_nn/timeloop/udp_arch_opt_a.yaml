@@ -1,0 +1,178 @@
+# =============================================================================
+# udp_arch_opt_a.yaml — Optimised UDP array: 8 columns × 12 rows = 96 PEs
+# =============================================================================
+#
+# Motivation (Block D — array size optimisation):
+#
+#   Baseline (12×12=144 PEs) analysis reveals that the Timeloop mapper always
+#   picks K=2 × Q=4 = 8 spatial groups at the DummyBuffer level (column axis).
+#   This leaves 4 of 12 columns permanently idle → 67% column efficiency.
+#
+#   Opt-A reduces meshX from 12 to 8 so that K=2 × Q=4 fills ALL columns.
+#   Row count stays at 12, matching the baseline.
+#
+#   Expected effect on representative layers:
+#     stem_conv:     50% → ~75% utilisation  (8/8 cols, 9/12 rows)
+#     s1_conv1:      67% → ~100% utilisation (8/8 cols, 12/12 rows)
+#     classifier:    ~56% → ~56%+ (very small layer, limited parallelism)
+#
+#   Hardware cost: 96 PEs vs 144 (–33% area, –33% DSP48E2 blocks)
+#   Latency cost : comparable or slightly higher (fewer PEs for small layers)
+#
+# All other specs (bit widths, buffer sizes, dataflow) are unchanged.
+# =============================================================================
+
+mapper:
+  algorithm: linear-pruned
+  optimization-metrics:
+  - delay
+  - energy
+  victory-condition: 100
+  timeout: 2000
+  num-threads: 4
+
+arch:
+  # ── Compute: 96 PEs on an 8-wide spatial mesh (8 cols × 12 rows) ──────────
+  arithmetic:
+    name: MACs
+    instances: 96
+    meshX: 8
+    word-bits: 4
+
+  storage:
+  # ── L0 partial sums (per PE, 12-bit accumulators) ────────────────────────
+  - name: PsumRegFile
+    instances: 96
+    meshX: 8
+    entries: 16
+    word-bits: 12
+    read_bandwidth: 2
+    write_bandwidth: 2
+
+  # ── L1 weights (stationary in WS dataflow) ───────────────────────────────
+  - name: WeightRegFile
+    instances: 96
+    meshX: 8
+    entries: 192
+    word-bits: 4
+    read_bandwidth: 2
+    write_bandwidth: 2
+
+  # ── L1 activations (stream through systolic rows) ────────────────────────
+  # entries=8: matches 8-column pipeline skew depth
+  - name: InputRegFile
+    instances: 96
+    meshX: 8
+    entries: 8
+    word-bits: 4
+    read_bandwidth: 2
+    write_bandwidth: 2
+
+  # ── Mapping shim (8 columns, down from 12) ────────────────────────────────
+  - name: DummyBuffer
+    instances: 8
+    meshX: 8
+    entries: 0
+    word-bits: 4
+
+  # ── Shared on-chip buffer (unchanged) ───────────────────────────────────
+  - name: GlobalBuffer
+    instances: 1
+    meshX: 1
+    sizeKB: 256
+    word-bits: 4
+    block-size: 4
+    read_bandwidth: 16
+    write_bandwidth: 16
+
+  # ── Off-chip memory ─────────────────────────────────────────────────────
+  - name: DRAM
+    technology: DRAM
+    instances: 1
+    word-bits: 4
+
+mapspace:
+  constraints:
+  # ── Weight-stationary datatype bypass ─────────────────────────────────────
+  - target: PsumRegFile
+    type: datatype
+    keep:
+    - Outputs
+    bypass:
+    - Weights
+    - Inputs
+
+  - target: WeightRegFile
+    type: datatype
+    keep:
+    - Weights
+    bypass:
+    - Inputs
+    - Outputs
+
+  - target: InputRegFile
+    type: datatype
+    keep:
+    - Inputs
+    bypass:
+    - Weights
+    - Outputs
+
+  - target: DummyBuffer
+    type: datatype
+    bypass:
+    - Inputs
+    - Outputs
+    - Weights
+
+  - target: GlobalBuffer
+    type: datatype
+    keep:
+    - Inputs
+    - Outputs
+    bypass:
+    - Weights
+
+  # ── Spatial mapping (8-wide column axis) ─────────────────────────────────
+  - target: DummyBuffer
+    type: spatial
+    split: 4
+    factors: N1 P1 Q1 R1 S0
+    permutation: NPQR SCK
+
+  - target: GlobalBuffer
+    type: spatial
+    split: 7
+    factors: N1 C1 P1 R1 S1
+    permutation: NCPRS QK
+
+  # ── Temporal loop ordering (WS schedule, unchanged from baseline) ─────────
+  - target: PsumRegFile
+    type: temporal
+    factors: N1 C1 P1 Q1 R1 S1
+    permutation: NCPQRS K
+
+  - target: WeightRegFile
+    type: temporal
+    factors: N1 K1 P1 Q1 S1 R0
+    permutation: NKPQS CR
+
+  - target: InputRegFile
+    type: temporal
+    factors: N1 K1 C1 P1 Q1 R1 S1
+    permutation: NKCPQRS
+
+  - target: DummyBuffer
+    type: temporal
+    factors: N1 K1 C1 P1 Q1 R1 S1
+    permutation: NKCPQRS
+
+  - target: GlobalBuffer
+    type: temporal
+    factors: Q1 R1 S1 C1 P0
+    permutation: QRSC PNK
+
+  - target: DRAM
+    type: temporal
+    factors: R1 S1 P1
+    permutation: RSP CKNQ

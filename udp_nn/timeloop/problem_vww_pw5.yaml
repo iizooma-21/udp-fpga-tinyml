@@ -1,0 +1,30 @@
+# =============================================================================
+# problem_vww_pw5.yaml — MLPerf Tiny VWW, MobileNetV1 pointwise conv (mid)
+# =============================================================================
+#
+# Representative pointwise conv (32→64 channels, 12×12 feature map):
+#   Conv2d(32, 64, kernel=1×1)  [α=0.25: 32→64 channels]
+#   Input : (1, 32, 12, 12)
+#   Output: (1, 64, 12, 12)
+#
+# im2col GEMM equivalent:
+#   M = 12 × 12 = 144   (spatial positions)
+#   N = 64              (output channels)
+#   K = 32              (input channels)
+#   MACs = 144 × 64 × 32 = 294,912
+#
+# Timeloop: R=S=1 (pure channel mixing)
+# =============================================================================
+
+problem:
+  R: 1
+  S: 1
+  P: 12
+  Q: 12
+  C: 32
+  K: 64
+  N: 1
+  Wstride: 1
+  Hstride: 1
+  Wdilation: 1
+  Hdilation: 1

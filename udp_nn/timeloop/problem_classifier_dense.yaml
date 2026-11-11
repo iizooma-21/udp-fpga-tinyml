@@ -1,0 +1,35 @@
+# =============================================================================
+# problem_classifier_dense.yaml — MLPerf Tiny ResNet-8, classifier (FC)
+# =============================================================================
+#
+# Keras layers (resnet_v1_eembc, conv_filters=26):
+#   AveragePooling2D(8x8) on 8x8x104 feature map  ->  104-d vector
+#   Dense(10, softmax)                              ->  10 class logits
+#
+# GEMM equivalent (see analyze_resnet8.py / LAYER_TABLE.md):
+#   C[M x N] = A[M x K] @ B[K x N]
+#   M = 1     (batch size 1, single inference)
+#   N = 10    (output classes)
+#   K = 104   (input features after global average pool)
+#   MACs = 1,040
+#
+# Timeloop mapping:
+#   A fully-connected layer is expressed as a 1x1 convolution with P=Q=1:
+#     R=1, S=1, P=1, Q=1, C=104 (input features), K=10 (outputs), N=1
+#
+# Run:
+#   timeloop-mapper udp_arch.yaml problem_classifier_dense.yaml
+# =============================================================================
+
+problem:
+  R: 1
+  S: 1
+  P: 1
+  Q: 1
+  C: 104
+  K: 10
+  N: 1
+  Wstride: 1
+  Hstride: 1
+  Wdilation: 1
+  Hdilation: 1

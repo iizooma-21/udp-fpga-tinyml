@@ -1,0 +1,35 @@
+# =============================================================================
+# problem_s1_conv1.yaml — MLPerf Tiny ResNet-8, stage-1 conv1
+# =============================================================================
+#
+# Keras layer (resnet_v1_eembc, conv_filters=26):
+#   First conv inside residual stack 1:
+#   Conv2D(26, kernel=3x3, stride=1, padding=same) on 32x32x26 input
+#   (after stem conv + BN + ReLU)
+#
+# im2col GEMM equivalent (see analyze_resnet8.py / LAYER_TABLE.md):
+#   C[M x N] = A[M x K] @ B[K x N]
+#   M = 1024  (32 x 32 output spatial positions)
+#   N = 26    (output channels)
+#   K = 234   (3 x 3 x 26 kernel volume)
+#   MACs = 6,230,016
+#
+# Timeloop CNN notation:
+#   P=32, Q=32, C=26, K=26, R=3, S=3, N=1, stride=1
+#
+# Run:
+#   timeloop-mapper udp_arch.yaml problem_s1_conv1.yaml
+# =============================================================================
+
+problem:
+  R: 3
+  S: 3
+  P: 32
+  Q: 32
+  C: 26
+  K: 26
+  N: 1
+  Wstride: 1
+  Hstride: 1
+  Wdilation: 1
+  Hdilation: 1

@@ -1,0 +1,112 @@
+========================================================================
+ MLPerf Tiny - End-to-End Latency Estimation
+ Clock    : 200 MHz
+ UDP      : div6  (P_w=3 P_a=2, 6 MACs/PE/cycle)
+ Arrays   : base 12x12 (144 PEs) | opt_a 12x8 (96 PEs) | opt_b 9x8 (72 PEs)
+ Method   : measured Timeloop cycles where available;
+            '(est)' = MAC-proportional estimate from same-type reference layer
+========================================================================
+
+------------------------------------------------------------------------
+  ResNet-8 (IC)
+------------------------------------------------------------------------
+  Layer              cnt        MACs   TL-cycles  Source
+  ------------------  ---  ----------  ----------  --------------------
+  ic_stem              1     718,848       9,984  measured
+  ic_s1c               2   6,230,016      64,896  measured
+  ic_s2c1              1   3,115,008      32,448  est from s1_conv1/base
+  ic_s2c2              1   6,230,016      64,896  est from s1_conv1/base
+  ic_s2sc              1     346,112       4,326  est from classifier_dense/base
+  ic_s3c1              1   3,115,008      32,448  est from s1_conv1/base
+  ic_s3c2              1   6,230,016      64,896  est from s1_conv1/base
+  ic_s3sc              1     346,112       4,326  est from classifier_dense/base
+  ic_cls               1       1,040          13  measured
+
+  Metric                                        base         opt_a         opt_b
+  ------------------------------------  ------------  ------------  ------------
+  TL cycles total (x1/PE)                    343,129       351,796       676,276
+  UDP real cycles (div6)                      57,188        58,632       112,712
+  Latency (us)                                 285.9         293.2         563.6
+
+------------------------------------------------------------------------
+  DS-CNN (KWS)
+------------------------------------------------------------------------
+  Layer              cnt        MACs   TL-cycles  Source
+  ------------------  ---  ----------  ----------  --------------------
+  kws_conv1            1     320,000       4,000  measured
+  kws_dw               4      72,000         600  measured
+  kws_pw               4     512,000       6,400  measured
+  kws_fc               1         768          10  est from kws_pw1/base
+
+  Metric                                        base         opt_a         opt_b
+  ------------------------------------  ------------  ------------  ------------
+  TL cycles total (x1/PE)                     32,010        39,012        42,012
+  UDP real cycles (div6)                       5,335         6,502         7,002
+  Latency (us)                                  26.7          32.5          35.0
+
+------------------------------------------------------------------------
+  MobileNetV1 (VWW)
+------------------------------------------------------------------------
+  Layer              cnt        MACs   TL-cycles  Source
+  ------------------  ---  ----------  ----------  --------------------
+  vww_stem             1     497,664       3,456  measured
+  vww_dw0              1     165,888       1,152  est from vww_dw5/base
+  vww_pw0              1     294,912       3,072  est from vww_pw5/base
+  vww_dw1              1      82,944         576  est from vww_dw5/base
+  vww_pw1              1     294,912       3,072  est from vww_pw5/base
+  vww_dw2              1     165,888       1,152  est from vww_dw5/base
+  vww_pw2              1     589,824       6,144  est from vww_pw5/base
+  vww_dw3              1      41,472         288  measured
+  vww_pw3              1     294,912       3,072  measured
+  vww_dw4              1      82,944         576  est from vww_dw5/base
+  vww_pw4              1     589,824       6,144  est from vww_pw5/base
+  vww_dw5b             1      20,736         144  est from vww_dw5/base
+  vww_pw5b             1     294,912       3,072  est from vww_pw5/base
+  vww_dw6              5      41,472         288  est from vww_dw5/base
+  vww_pw6              5     589,824       6,144  est from vww_pw5/base
+  vww_dw11             1      10,368          72  est from vww_dw5/base
+  vww_pw11             1     294,912       3,072  est from vww_pw5/base
+  vww_dw12             1      20,736         144  est from vww_dw5/base
+  vww_pw12             1     589,824       6,144  est from vww_pw5/base
+  vww_fc               1         512           5  est from vww_pw5/base
+
+  Metric                                        base         opt_a         opt_b
+  ------------------------------------  ------------  ------------  ------------
+  TL cycles total (x1/PE)                     73,517       110,276       120,320
+  UDP real cycles (div6)                      12,252        18,379        20,053
+  Latency (us)                                  61.3          91.9         100.3
+
+------------------------------------------------------------------------
+  AutoEncoder (AD)
+------------------------------------------------------------------------
+  Layer              cnt        MACs   TL-cycles  Source
+  ------------------  ---  ----------  ----------  --------------------
+  ad_enc_in            1      81,920       1,024  measured
+  ad_hidden            6      16,384         205  est from ad_dense1/base
+  ad_bn_enc            1       1,024          13  est from ad_dense1/base
+  ad_bn_dec            1       1,024          13  est from ad_dense1/base
+  ad_out               1      81,920       1,024  est from ad_dense1/base
+
+  Metric                                        base         opt_a         opt_b
+  ------------------------------------  ------------  ------------  ------------
+  TL cycles total (x1/PE)                      3,304         3,304         4,128
+  UDP real cycles (div6)                         550           550           688
+  Latency (us)                                   2.8           2.8           3.4
+
+========================================================================
+  SUMMARY - End-to-End Inference Latency (us) at 200 MHz
+========================================================================
+  Network                       base 12x12    opt_a 12x8     opt_b 9x8
+  --------------------------  ------------  ------------  ------------
+  ResNet-8 (IC)                      285.9         293.2         563.6
+  DS-CNN (KWS)                        26.7          32.5          35.0
+  MobileNetV1 (VWW)                   61.3          91.9         100.3
+  AutoEncoder (AD)                     2.8           2.8           3.4
+
+  Methodology:
+  - 'measured': actual Timeloop mapper result
+  - '(est)': cycles = ref_cycles x new_MACs/ref_MACs (same layer type)
+  - real_cycles = TL_cycles / 6  (UDP: P_w=3, P_a=2, 6 MACs/PE/cycle)
+  - latency = real_cycles / 200e6
+  - KWS conv1 uses base cycles for opt_a/opt_b (10x4 kernel, no valid map)
+========================================================================

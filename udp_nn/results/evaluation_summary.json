@@ -1,0 +1,134 @@
+{
+  "accuracy": [
+    {
+      "name": "FP32 baseline",
+      "task": "Task 2",
+      "accuracy": 90.49000144004822,
+      "mlperf_pass": true
+    },
+    {
+      "name": "Naive INT4 PTQ (per-tensor)",
+      "task": "Task 3",
+      "accuracy": 49.28,
+      "mlperf_pass": false
+    },
+    {
+      "name": "UDP no post-proc (weight-only INT4)",
+      "task": "Task 4",
+      "accuracy": 78.59,
+      "mlperf_pass": false
+    },
+    {
+      "name": "UDP with post-proc (full INT4)",
+      "task": "Task 5",
+      "accuracy": 74.13,
+      "mlperf_pass": false
+    }
+  ],
+  "timeloop": [
+    {
+      "layer": "stem_conv",
+      "arch_id": "baseline",
+      "pe_count": 144,
+      "utilized": 72,
+      "total_pes": 144,
+      "utilization": 0.5,
+      "cycles": 9984,
+      "udp_cycles": 1664,
+      "computes": 718848
+    },
+    {
+      "layer": "s1_conv1",
+      "arch_id": "baseline",
+      "pe_count": 144,
+      "utilized": 96,
+      "total_pes": 144,
+      "utilization": 0.67,
+      "cycles": 64896,
+      "udp_cycles": 10816,
+      "computes": 6230016
+    },
+    {
+      "layer": "classifier_dense",
+      "arch_id": "baseline",
+      "pe_count": 144,
+      "utilized": 80,
+      "total_pes": 144,
+      "utilization": 0.56,
+      "cycles": 13,
+      "udp_cycles": 2,
+      "computes": 1040
+    },
+    {
+      "layer": "stem_conv",
+      "arch_id": "opt_a",
+      "pe_count": 96,
+      "utilized": 72,
+      "total_pes": 96,
+      "utilization": 0.75,
+      "cycles": 9984,
+      "udp_cycles": 1664,
+      "computes": 718848
+    },
+    {
+      "layer": "s1_conv1",
+      "arch_id": "opt_a",
+      "pe_count": 96,
+      "utilized": 96,
+      "total_pes": 96,
+      "utilization": 1.0,
+      "cycles": 64896,
+      "udp_cycles": 10816,
+      "computes": 6230016
+    },
+    {
+      "layer": "classifier_dense",
+      "arch_id": "opt_a",
+      "pe_count": 96,
+      "utilized": 40,
+      "total_pes": 96,
+      "utilization": 0.42,
+      "cycles": 26,
+      "udp_cycles": 4,
+      "computes": 1040
+    },
+    {
+      "layer": "stem_conv",
+      "arch_id": "opt_b",
+      "pe_count": 72,
+      "utilized": 72,
+      "total_pes": 72,
+      "utilization": 1.0,
+      "cycles": 9984,
+      "udp_cycles": 1664,
+      "computes": 718848
+    },
+    {
+      "layer": "s1_conv1",
+      "arch_id": "opt_b",
+      "pe_count": 72,
+      "utilized": 48,
+      "total_pes": 72,
+      "utilization": 0.67,
+      "cycles": 129792,
+      "udp_cycles": 21632,
+      "computes": 6230016
+    },
+    {
+      "layer": "classifier_dense",
+      "arch_id": "opt_b",
+      "pe_count": 72,
+      "utilized": 40,
+      "total_pes": 72,
+      "utilization": 0.56,
+      "cycles": 26,
+      "udp_cycles": 4,
+      "computes": 1040
+    }
+  ],
+  "constants": {
+    "mlperf_target": 85.0,
+    "udp_packing": 6,
+    "clock_mhz": 200
+  }
+}

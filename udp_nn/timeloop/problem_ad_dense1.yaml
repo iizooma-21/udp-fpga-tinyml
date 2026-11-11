@@ -1,0 +1,33 @@
+# =============================================================================
+# problem_ad_dense1.yaml — MLPerf Tiny AD, AutoEncoder first dense layer
+# =============================================================================
+#
+# PyTorch layer:
+#   Linear(640, 128)  — input embedding
+#   Modelled as a 1×1 "convolution" on a 1×1 feature map:
+#
+# im2col / GEMM equivalent:
+#   M = 1        (batch × spatial = 1×1)
+#   N = 128      (output units)
+#   K = 640      (input units)
+#   MACs = 128 × 640 = 81,920
+#
+# Note: Dense layers on systolic arrays yield very low utilisation because
+#       M=1 (no spatial reuse). This is expected and is a key finding —
+#       the UDP systolic array is optimised for 2-D convolutions, not dense.
+#
+# Timeloop CNN notation (P=Q=1, R=S=1 → GEMM mode):
+# =============================================================================
+
+problem:
+  R: 1
+  S: 1
+  P: 1
+  Q: 1
+  C: 640
+  K: 128
+  N: 1
+  Wstride: 1
+  Hstride: 1
+  Wdilation: 1
+  Hdilation: 1

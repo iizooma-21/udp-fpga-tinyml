@@ -1,0 +1,55 @@
+Device : cpu
+VWW val: 2,000 images loaded
+VWW train: 82,783 images loaded
+
+[1/4] FP32 accuracy ...
+[2/4] Naive INT4 PTQ ...
+[3/4] UDP Mode 4 (weight-only INT4) ...
+[4/4] UDP Mode 5 (full INT4 pipeline) ...
+
+====================================================
+VWW (MobileNetV1 0.25x) Accuracy Summary
+====================================================
+Mode                               Acc   >=80%
+----------------------------------------------------
+FP32                            81.95%    PASS
+Naive INT4 PTQ                  53.35%    FAIL
+UDP Mode 4 (w-only)             50.65%    FAIL
+UDP Mode 5 (full INT4)          50.25%    FAIL
+====================================================
+
+Results saved -> ./checkpoints/vww_results.json
+Device : cpu
+VWW val: 2,000 images loaded
+VWW train: 82,783 images loaded
+
+[1/3] QAT-w4 direct accuracy ...
+[2/3] UDP Mode 4 with QAT-trained weights ...
+[3/3] UDP Mode 5 with QAT-trained weights ...
+
+====================================================
+VWW QAT Evaluation
+====================================================
+  QAT-w4 direct                      81.40%  PASS
+  UDP Mode 4 (QAT weights)           81.40%  PASS
+  UDP Mode 5 (QAT weights)           69.30%  FAIL
+====================================================
+
+Results saved -> ./checkpoints/vww_qat_results.json
+Device : cpu
+VWW val: 2,000 images loaded
+VWW train: 82,783 images loaded
+
+[1/3] QAT-w4 direct accuracy ...
+[2/3] UDP Mode 4 with QAT-trained weights ...
+[3/3] UDP Mode 5 with QAT-trained weights ...
+
+====================================================
+VWW QAT Evaluation
+====================================================
+  QAT-w4 direct                      77.70%  FAIL
+  UDP Mode 4 (QAT weights)           77.70%  FAIL
+  UDP Mode 5 (QAT weights)           70.10%  FAIL
+====================================================
+
+Results saved -> ./checkpoints/vww_qat_results.json
