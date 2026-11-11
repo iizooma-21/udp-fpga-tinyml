@@ -1,7 +1,8 @@
-# UDP: Universal DSP Packing for TinyML on FPGAs
+# Accelerating TinyML Inference via DSP-Packing on Resource-Constrained FPGAs
 
-**Bachelor Thesis — Hazem**  
-_Department of Computer Engineering and Computer Science, Semester 8_
+**Bachelor Thesis — Hazem Nabil Fayed**  
+_Institut für Technische Informatik (ITEC) — Chair for Embedded Systems (CES)_  
+_Karlsruhe Institute of Technology (KIT)_
 
 ---
 
@@ -678,4 +679,5 @@ If you use this work, please cite the original UDP paper:
 
 ---
 
-_Bachelor Thesis, Semester 8 — Computer Engineering & Computer Science_
+_Bachelor Thesis — Hazem Nabil Fayed_  
+_Institut für Technische Informatik (ITEC) · Chair for Embedded Systems (CES) · KIT_
